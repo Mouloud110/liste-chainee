@@ -90,3 +90,18 @@ make: 'demo' is up to date.
 | --- | --- |
 | A | Avec la dépendance correcte, toucher `liste.h` invalide les deux objets, car les deux sources incluent l'en-tête. Dans la version fautive, `main.o` paraît encore à jour et n'est pas reconstruit. |
 | B | L'exécutable peut mélanger un `main.o` compilé avec l'ancienne définition de `Maillon` et un `liste.o` compilé avec la nouvelle. Les deux unités de traduction n'ont alors plus la même vision de la structure : le programme a un comportement indéfini malgré une édition de liens réussie. |
+
+## Exercice 6 — Compteur d'allocations
+
+| Mesure | Sans fuite | Avec une seconde liste non libérée |
+| --- | ---: | ---: |
+| Compteur après construction des listes | 5 | 8 |
+| Compteur après libération de la liste principale | 0 | 3 |
+
+La version avec fuite a été testée temporairement, puis corrigée avant le commit.
+
+| Question | Réponse |
+| --- | --- |
+| A | `blocs`, `suivi_malloc` et `suivi_free` sont des détails d'implémentation. `static` leur donne une liaison interne : ils ne polluent pas l'API et ne peuvent pas être appelés directement depuis un autre module. Seule la fonction de consultation du compteur est publique. |
+| B | Incrémenter après l'échec de `malloc` compterait un bloc qui n'existe pas. Décrémenter pour `NULL` fausserait le compteur, alors que `free(NULL)` ne libère rien. |
+| C | Le compteur indique combien de blocs restent, mais pas leur origine. Avec ce seul outil, on peut afficher sa valeur avant et après chaque opération, réduire le scénario et ajouter temporairement des étiquettes aux allocations pour isoler l'endroit où l'équilibre se rompt. |

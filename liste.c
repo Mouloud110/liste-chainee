@@ -2,9 +2,32 @@
 #include <stdlib.h>
 #include "liste.h"
 
+/* Compteur d'allocations interne au module. */
+static int blocs = 0;
+
+static void *suivi_malloc(size_t taille)
+{
+    void *p = malloc(taille);
+    if (p != NULL) blocs++;
+    return p;
+}
+
+static void suivi_free(void *p)
+{
+    if (p != NULL) {
+        blocs--;
+        free(p);
+    }
+}
+
+int liste_blocs_en_circulation(void)
+{
+    return blocs;
+}
+
 Maillon *liste_inserer(Maillon *tete, int valeur)
 {
-    Maillon *m = malloc(sizeof(Maillon));
+    Maillon *m = suivi_malloc(sizeof(Maillon));
     if (m == NULL) { perror("malloc"); exit(EXIT_FAILURE); }
     m->valeur = valeur;
     m->suivant = tete;  /* 1. il pointe l'ancienne tete */
@@ -37,7 +60,7 @@ void liste_liberer(Maillon *tete)
     Maillon *m = tete;
     while (m != NULL) {
         Maillon *suiv = m->suivant;  /* sauvegarder AVANT de liberer */
-        free(m);
+        suivi_free(m);
         m = suiv;
     }
 }
