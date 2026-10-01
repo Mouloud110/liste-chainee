@@ -64,3 +64,17 @@ collect2.exe: error: ld returned 1 exit status
 | 1 | Le cas 1 vient de l'éditeur de liens : chaque source a pu être compilée, mais `ld` ne trouve pas les définitions des fonctions contenues dans `liste.o`. Les termes `undefined reference` et `ld returned 1 exit status` l'indiquent. |
 | 2 | Le premier message, `unknown type name 'Maillon'`, est la cause utile. Les déclarations implicites et conversions qui suivent ne sont que des conséquences de l'en-tête absent. |
 | 3 | Le problème devient réaliste dès que plusieurs en-têtes s'incluent : par exemple, `main.c` inclut deux modules qui incluent tous deux `liste.h`. Sans garde, le contenu de `liste.h` est alors défini deux fois dans la même unité de traduction. |
+
+## Exercice 4 — Premier Makefile
+
+`make clean && make` exécute les deux compilations puis l'édition de liens. Une
+seconde commande `make`, sans modification, affiche :
+
+```text
+make: 'demo' is up to date.
+```
+
+| Question | Réponse |
+| --- | --- |
+| A | `make` compare la date de la cible avec celles de ses dépendances. Comme `demo`, `main.o` et `liste.o` existent et qu'aucune dépendance n'est plus récente, aucune commande n'est nécessaire. |
+| B | Avec quatre espaces à la place de la tabulation, GNU Make 4.4.1 affiche `Makefile:2: *** missing separator.  Stop.` |
