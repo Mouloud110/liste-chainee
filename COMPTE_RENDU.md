@@ -41,3 +41,26 @@ liberee
 | A | Deux objets sont produits : `main.o` et `liste.o`. Il n'existe pas de `liste.h.o`, car un en-tête est inclus dans les fichiers source par le préprocesseur ; ce n'est pas une unité de traduction compilée séparément. |
 | B | La commande directe recompile les deux sources à chaque fois. La compilation en deux étapes permet de ne recompiler que les objets dont les sources ou dépendances ont changé, puis de relier rapidement l'ensemble. |
 
+## Exercice 3 — Trois erreurs classiques
+
+Les modifications fautives ont été faites une par une dans des copies de travail,
+puis le code correct a été recompilé. Les chemins absolus affichés par GCC ont été
+retirés du tableau pour le rendre lisible.
+
+| Cas | Premier message utile observé | Étape |
+| --- | --- | --- |
+| 1 — objet oublié | `main.c:7:(.text+0x34): undefined reference to 'liste_inserer'` | Édition de liens |
+| 2 — inclusion oubliée | `main.c:5:5: error: unknown type name 'Maillon'` | Compilation |
+| 3 — garde oubliée | `liste.h:3:16: error: redefinition of 'struct Maillon'` | Compilation |
+
+Le premier cas se termine également par :
+
+```text
+collect2.exe: error: ld returned 1 exit status
+```
+
+| Question | Réponse |
+| --- | --- |
+| 1 | Le cas 1 vient de l'éditeur de liens : chaque source a pu être compilée, mais `ld` ne trouve pas les définitions des fonctions contenues dans `liste.o`. Les termes `undefined reference` et `ld returned 1 exit status` l'indiquent. |
+| 2 | Le premier message, `unknown type name 'Maillon'`, est la cause utile. Les déclarations implicites et conversions qui suivent ne sont que des conséquences de l'en-tête absent. |
+| 3 | Le problème devient réaliste dès que plusieurs en-têtes s'incluent : par exemple, `main.c` inclut deux modules qui incluent tous deux `liste.h`. Sans garde, le contenu de `liste.h` est alors défini deux fois dans la même unité de traduction. |
