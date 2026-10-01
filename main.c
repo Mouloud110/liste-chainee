@@ -13,6 +13,14 @@ int main(void)
     printf("longueur  : %d\n", liste_longueur(liste));
     printf("contient 30 : %s\n", liste_contient(liste, 30) ? "oui" : "non");
 
+    int maximum;
+    if (liste_maximum(liste, &maximum))
+        printf("maximum   : %d\n", maximum);
+
+    maximum = 12345;
+    if (!liste_maximum(NULL, &maximum))
+        printf("liste vide : aucun maximum (resultat inchange : %d)\n", maximum);
+
     liste_liberer(liste);
     printf("liberee\n");
     printf("blocs apres liberation   : %d\n",

@@ -5,6 +5,8 @@ découpée en un module réutilisable et un programme de démonstration.
 
 ## Compiler et exécuter
 
+Avec GCC et GNU Make (testé sous MSYS2 et Linux) :
+
 ```sh
 make clean
 make
@@ -24,4 +26,3 @@ La compilation utilise C11, les informations de débogage et les avertissements
 - `Makefile` : compilation séparée et nettoyage ;
 - `deborde.c` : exemple pédagogique de dépassement de tampon ;
 - `COMPTE_RENDU.md` : observations et réponses aux exercices.
-

@@ -1,7 +1,8 @@
 # Compte rendu — TP « Sortir du fichier unique »
 
 Les commandes et messages consignés ci-dessous ont été vérifiés avec GCC 16.2.0
-(MSYS2 UCRT64) sous Windows.
+(MSYS2 UCRT64) sous Windows. Les mesures Valgrind ont été réalisées avec GCC
+15.2.0 et Valgrind 3.25.1 sous Alpine Linux (WSL 1).
 
 ## Exercice 0 — Dépôt et fichiers générés
 
@@ -44,8 +45,9 @@ liberee
 ## Exercice 3 — Trois erreurs classiques
 
 Les modifications fautives ont été faites une par une dans des copies de travail,
-puis le code correct a été recompilé. Les chemins absolus affichés par GCC ont été
-retirés du tableau pour le rendre lisible.
+puis le code correct a été recompilé. Le tableau reproduit le premier diagnostic
+utile exactement ; seul le préfixe de chemin absolu ajouté par l'éditeur de liens
+a été retiré.
 
 | Cas | Premier message utile observé | Étape |
 | --- | --- | --- |
@@ -69,6 +71,14 @@ collect2.exe: error: ld returned 1 exit status
 
 `make clean && make` exécute les deux compilations puis l'édition de liens. Une
 seconde commande `make`, sans modification, affiche :
+
+```text
+gcc -Wall -Wextra -Werror -std=c11 -g -c main.c -o main.o
+gcc -Wall -Wextra -Werror -std=c11 -g -c liste.c -o liste.o
+gcc -Wall -Wextra -Werror -std=c11 -g -o demo main.o liste.o
+```
+
+La seconde exécution affiche :
 
 ```text
 make: 'demo' is up to date.
@@ -108,28 +118,38 @@ La version avec fuite a été testée temporairement, puis corrigée avant le co
 
 ## Exercice 7 — Vérification mémoire
 
-Le programme final a été compilé avec Clang 22.1.8 et
-`-fsanitize=address -fno-omit-frame-pointer`. Il s'exécute sans diagnostic et
-retourne 0. Le compteur interne revient également à 0.
+Le programme a été compilé avec `-g`, puis exécuté sous Valgrind 3.25.1. Les
+deux dernières lignes utiles du rapport sans fuite sont :
 
-Le runtime AddressSanitizer de Windows signale explicitement que
-`detect_leaks` n'est pas pris en charge sur cette plateforme. Il détecte bien les
-accès invalides (voir l'exercice 8), mais pas les blocs oubliés. La variante avec
-fuite a donc aussi été vérifiée avec le compteur : il reste exactement 3 blocs.
-Sur une plateforme Valgrind/LeakSanitizer 64 bits, `sizeof(Maillon)` vaut 16 ici,
-donc la même fuite correspond aux mesures suivantes :
+```text
+All heap blocks were freed -- no leaks are possible
+ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+
+La variante volontairement fuyarde produit cette pile d'appels :
+
+```text
+malloc (vg_replace_malloc.c:446)
+suivi_malloc (liste.c:10)
+liste_inserer (liste.c:30)
+main (main.c:10)
+```
 
 | Mesure | Sans fuite | Avec la fuite de trois maillons |
 | --- | ---: | ---: |
-| `definitely lost` / fuite directe | 0 | 1 bloc, 16 octets |
-| `indirectly lost` / fuite indirecte | 0 | 2 blocs, 32 octets |
+| `definitely lost` | 0 octet | 16 octets dans 1 bloc |
+| `indirectly lost` | 0 octet | 32 octets dans 2 blocs |
+| `total heap usage` | 5 allocations, 5 libérations, 80 octets | 8 allocations, 5 libérations, 128 octets |
 | Compteur du module | 0 | 3 |
+
+Le runtime AddressSanitizer de Windows ne prend pas en charge `detect_leaks`,
+mais il a été utilisé en complément pour les accès invalides de l'exercice 8.
 
 | Question | Réponse |
 | --- | --- |
 | A | La pile d'appels indique la ligne qui appelle `liste_inserer` lors de la création de la seconde liste : c'est le lieu de l'allocation devenue inaccessible. Ce n'est pas une ligne où `free` aurait été oublié, car une opération absente n'a pas de ligne exécutable. |
 | B | La tête devenue inaccessible est le bloc directement perdu. Les deux maillons suivants ne sont accessibles qu'en suivant son pointeur : ils sont donc indirectement perdus. |
-| C | Le programme réalise 5 allocations et 5 libérations de maillons sans fuite, puis 8 allocations et seulement 5 libérations dans la variante fuyarde. Le total affiché par Valgrind peut être supérieur, car il inclut aussi les allocations internes de la bibliothèque C, notamment celles liées aux entrées-sorties. |
+| C | Ici, Valgrind indique 5 allocations/5 libérations sans fuite et 8/5 avec fuite : la libc musl d'Alpine n'a pas fait d'allocation supplémentaire pour ces sorties. Avec une libc qui alloue un tampon pour `printf`, le total peut être supérieur au nombre de maillons (par exemple 6/6 puis 9/6), car Valgrind compte aussi les allocations internes de la bibliothèque C. |
 
 ## Exercice 8 — Ce que le compteur ne voit pas
 
@@ -154,3 +174,30 @@ L'exécution instrumentée se termine avec le code 1.
 | B | Les 20 octets viennent de `5 * sizeof(int)` avec des entiers de 4 octets. `t[5]` commence exactement à la première adresse après le bloc, donc 0 octet après celui-ci. `t[6]` commencerait 4 octets après le bloc. |
 | C | Une sortie apparemment correcte et un code de retour nul ne prouvent pas que le programme est correct. Un test peut « passer » alors que le programme a un comportement indéfini. |
 | D | Le compteur est un contrôle léger et permanent de l'équilibre des allocations du module. Valgrind ou AddressSanitizer est nécessaire pour localiser les erreurs et détecter les dépassements, accès après libération et autres accès mémoire invalides. |
+
+## Exercice 9 — Ajouter `liste_maximum`
+
+Sortie finale du programme :
+
+```text
+blocs apres construction : 5
+liste     : 50 -> 40 -> 30 -> 20 -> 10 -> NULL
+longueur  : 5
+contient 30 : oui
+maximum   : 50
+liste vide : aucun maximum (resultat inchange : 12345)
+liberee
+blocs apres liberation   : 0
+```
+
+Le test avec `NULL` confirme à la fois le retour `false` et l'absence de
+modification de `*resultat`.
+
+Après cet ajout, une nouvelle compilation stricte et une nouvelle exécution sous
+Valgrind donnent encore `All heap blocks were freed` et `ERROR SUMMARY: 0 errors`.
+Une exécution AddressSanitizer séparée se termine également sans diagnostic.
+
+| Question | Réponse |
+| --- | --- |
+| A | Trois fichiers ont été modifiés : `liste.h`, `liste.c` et `main.c`. Comme le Makefile fait dépendre chaque objet de `liste.h`, `make` recompile `main.o` et `liste.o`, puis relie `demo`. |
+| B | `-1` peut être une valeur légitime de la liste, voire son maximum. Le booléen sépare sans ambiguïté l'absence de résultat de la valeur entière obtenue. |

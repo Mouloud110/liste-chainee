@@ -48,6 +48,18 @@ bool liste_contient(const Maillon *tete, int valeur)
     return false;
 }
 
+bool liste_maximum(const Maillon *tete, int *resultat)
+{
+    if (tete == NULL) return false;
+
+    int max = tete->valeur;
+    for (const Maillon *m = tete->suivant; m != NULL; m = m->suivant)
+        if (m->valeur > max) max = m->valeur;
+
+    *resultat = max;
+    return true;
+}
+
 void liste_afficher(const Maillon *tete)
 {
     for (const Maillon *m = tete; m != NULL; m = m->suivant)
