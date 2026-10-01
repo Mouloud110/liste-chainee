@@ -105,3 +105,28 @@ La version avec fuite a été testée temporairement, puis corrigée avant le co
 | A | `blocs`, `suivi_malloc` et `suivi_free` sont des détails d'implémentation. `static` leur donne une liaison interne : ils ne polluent pas l'API et ne peuvent pas être appelés directement depuis un autre module. Seule la fonction de consultation du compteur est publique. |
 | B | Incrémenter après l'échec de `malloc` compterait un bloc qui n'existe pas. Décrémenter pour `NULL` fausserait le compteur, alors que `free(NULL)` ne libère rien. |
 | C | Le compteur indique combien de blocs restent, mais pas leur origine. Avec ce seul outil, on peut afficher sa valeur avant et après chaque opération, réduire le scénario et ajouter temporairement des étiquettes aux allocations pour isoler l'endroit où l'équilibre se rompt. |
+
+## Exercice 7 — Vérification mémoire
+
+Le programme final a été compilé avec Clang 22.1.8 et
+`-fsanitize=address -fno-omit-frame-pointer`. Il s'exécute sans diagnostic et
+retourne 0. Le compteur interne revient également à 0.
+
+Le runtime AddressSanitizer de Windows signale explicitement que
+`detect_leaks` n'est pas pris en charge sur cette plateforme. Il détecte bien les
+accès invalides (voir l'exercice 8), mais pas les blocs oubliés. La variante avec
+fuite a donc aussi été vérifiée avec le compteur : il reste exactement 3 blocs.
+Sur une plateforme Valgrind/LeakSanitizer 64 bits, `sizeof(Maillon)` vaut 16 ici,
+donc la même fuite correspond aux mesures suivantes :
+
+| Mesure | Sans fuite | Avec la fuite de trois maillons |
+| --- | ---: | ---: |
+| `definitely lost` / fuite directe | 0 | 1 bloc, 16 octets |
+| `indirectly lost` / fuite indirecte | 0 | 2 blocs, 32 octets |
+| Compteur du module | 0 | 3 |
+
+| Question | Réponse |
+| --- | --- |
+| A | La pile d'appels indique la ligne qui appelle `liste_inserer` lors de la création de la seconde liste : c'est le lieu de l'allocation devenue inaccessible. Ce n'est pas une ligne où `free` aurait été oublié, car une opération absente n'a pas de ligne exécutable. |
+| B | La tête devenue inaccessible est le bloc directement perdu. Les deux maillons suivants ne sont accessibles qu'en suivant son pointeur : ils sont donc indirectement perdus. |
+| C | Le programme réalise 5 allocations et 5 libérations de maillons sans fuite, puis 8 allocations et seulement 5 libérations dans la variante fuyarde. Le total affiché par Valgrind peut être supérieur, car il inclut aussi les allocations internes de la bibliothèque C, notamment celles liées aux entrées-sorties. |
