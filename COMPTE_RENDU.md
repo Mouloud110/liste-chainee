@@ -78,3 +78,15 @@ make: 'demo' is up to date.
 | --- | --- |
 | A | `make` compare la date de la cible avec celles de ses dépendances. Comme `demo`, `main.o` et `liste.o` existent et qu'aucune dépendance n'est plus récente, aucune commande n'est nécessaire. |
 | B | Avec quatre espaces à la place de la tabulation, GNU Make 4.4.1 affiche `Makefile:2: *** missing separator.  Stop.` |
+
+## Exercice 5 — Dépendance à l'en-tête
+
+| Étape | Ce que `make` recompile |
+| --- | --- |
+| 2 — avec la dépendance | `main.c` et `liste.c`, puis l'édition de liens de `demo` |
+| 4 — sans la dépendance de `main.o` | Seulement `liste.c`, puis l'édition de liens de `demo` |
+
+| Question | Réponse |
+| --- | --- |
+| A | Avec la dépendance correcte, toucher `liste.h` invalide les deux objets, car les deux sources incluent l'en-tête. Dans la version fautive, `main.o` paraît encore à jour et n'est pas reconstruit. |
+| B | L'exécutable peut mélanger un `main.o` compilé avec l'ancienne définition de `Maillon` et un `liste.o` compilé avec la nouvelle. Les deux unités de traduction n'ont alors plus la même vision de la structure : le programme a un comportement indéfini malgré une édition de liens réussie. |
