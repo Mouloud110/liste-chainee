@@ -130,3 +130,27 @@ donc la même fuite correspond aux mesures suivantes :
 | A | La pile d'appels indique la ligne qui appelle `liste_inserer` lors de la création de la seconde liste : c'est le lieu de l'allocation devenue inaccessible. Ce n'est pas une ligne où `free` aurait été oublié, car une opération absente n'a pas de ligne exécutable. |
 | B | La tête devenue inaccessible est le bloc directement perdu. Les deux maillons suivants ne sont accessibles qu'en suivant son pointeur : ils sont donc indirectement perdus. |
 | C | Le programme réalise 5 allocations et 5 libérations de maillons sans fuite, puis 8 allocations et seulement 5 libérations dans la variante fuyarde. Le total affiché par Valgrind peut être supérieur, car il inclut aussi les allocations internes de la bibliothèque C, notamment celles liées aux entrées-sorties. |
+
+## Exercice 8 — Ce que le compteur ne voit pas
+
+| Observation | Résultat obtenu |
+| --- | --- |
+| Sortie sans outil | `42` |
+| Code de sortie sans outil | `0` |
+| Diagnostic | `AddressSanitizer: heap-buffer-overflow` |
+
+AddressSanitizer localise l'écriture dans `deborde.c:8:10`, indique
+`WRITE of size 4`, puis précise :
+
+```text
+0 bytes after 20-byte region
+```
+
+L'exécution instrumentée se termine avec le code 1.
+
+| Question | Réponse |
+| --- | --- |
+| A | Il y a un `malloc` et un `free`. Le compteur reviendrait donc à 0 et ne détecterait rien, même si l'accès est invalide. |
+| B | Les 20 octets viennent de `5 * sizeof(int)` avec des entiers de 4 octets. `t[5]` commence exactement à la première adresse après le bloc, donc 0 octet après celui-ci. `t[6]` commencerait 4 octets après le bloc. |
+| C | Une sortie apparemment correcte et un code de retour nul ne prouvent pas que le programme est correct. Un test peut « passer » alors que le programme a un comportement indéfini. |
+| D | Le compteur est un contrôle léger et permanent de l'équilibre des allocations du module. Valgrind ou AddressSanitizer est nécessaire pour localiser les erreurs et détecter les dépassements, accès après libération et autres accès mémoire invalides. |
